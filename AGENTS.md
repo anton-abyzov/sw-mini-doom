@@ -1,0 +1,1427 @@
+# sw-mini-doom
+
+**Framework**: SpecWeave - Specification-First Development
+**Standard**: This file follows [agents.md](https://agents.md/) for universal AI compatibility
+
+---
+
+## Project Overview
+
+This is a **SpecWeave project** where specifications and documentation are the source of truth.
+
+### Core Principle
+**Specification Before Implementation** - Define WHAT and WHY before HOW
+
+### Key Concepts
+- **Increments**: Feature units with spec.md (WHAT/WHY), plan.md (HOW), tasks.md (checklist)
+- **Context Manifests**: Load only relevant files (70%+ token reduction)
+- **Living Documentation**: Specs evolve with code, never diverge
+- **Role-Based Development**: PM defines requirements, Architect designs, DevOps deploys
+
+---
+
+## Project Structure
+
+```
+.specweave/
+├── increments/              # Feature increments (auto-numbered)
+│   └── 0001-feature-name/
+│       ├── spec.md          # WHAT & WHY (business requirements)
+│       ├── plan.md          # HOW (technical implementation)
+│       ├── tasks.md         # Implementation checklist
+│       ├── tests.md         # Test strategy
+│       ├── context-manifest.yaml  # Selective loading (token savings!)
+│       ├── logs/            # Execution logs, errors
+│       ├── scripts/         # Helper scripts
+│       └── reports/         # Analysis, completion reports
+├── docs/internal/
+│   ├── strategy/            # Business specs (WHAT, WHY)
+│   ├── specs/               # Feature specifications (detailed requirements)
+│   ├── architecture/        # Technical design (HOW)
+│   ├── delivery/            # Roadmap, CI/CD, guides
+│   ├── operations/          # Runbooks, SLOs
+│   └── governance/          # Security, compliance
+
+.claude/                     # Claude Code components (if using Claude)
+├── agents/                  # Specialized roles (PM, Architect, DevOps, etc.)
+├── skills/                  # Capabilities (increment-planner, context-loader, etc.)
+└── commands/                # Slash commands (/specweave:increment, /specweave:do, /specweave:done)
+
+plugins/                     # Optional plugins (extended capabilities)
+└── specweave-{name}/
+    ├── .claude-plugin/      # Plugin manifest (Claude native format)
+    │   └── plugin.json
+    ├── skills/              # Plugin-specific skills
+    ├── agents/              # Plugin-specific agents
+    └── commands/            # Plugin-specific commands
+```
+
+**CRITICAL**: Always read `context-manifest.yaml` first! Only load files listed there.
+
+---
+
+## 🔌 Plugin Architecture (IMPORTANT FOR NON-CLAUDE TOOLS)
+
+### For Claude Code Users
+
+Plugins work automatically via marketplace:
+```bash
+/plugin install github
+```
+
+Skills, agents, and commands are immediately available. **Skip this section if using Claude Code.**
+
+### For Other Tools (Cursor, Copilot, ChatGPT, etc.)
+
+**⚠️ CRITICAL**: Claude Code has native plugin support. **Other tools DO NOT.**
+
+You MUST manually discover and load plugins at the start of each session:
+
+#### Step 1: Check for Plugins
+
+```bash
+# Check if project uses plugins
+ls plugins/
+
+# Example output:
+# specweave-github/
+# specweave-jira/
+```
+
+If `plugins/` folder exists, proceed to Step 2.
+
+#### Step 2: Load Plugin Components
+
+**For EACH plugin, load its components BEFORE starting work:**
+
+```bash
+# Example: Loading GitHub plugin
+
+# 1. Check plugin structure
+ls plugins/specweave-github/
+
+# 2. Load ALL plugin skills (like core skills)
+cat plugins/specweave-github/skills/github-sync/SKILL.md
+cat plugins/specweave-github/skills/github-issue-tracker/SKILL.md
+
+# 3. Load plugin agents (if any)
+cat plugins/specweave-github/agents/github-manager/AGENT.md
+
+# 4. Note available commands (load on-demand when user requests)
+ls plugins/specweave-github/commands/
+# github-create-issue.md, github-sync.md, github-status.md
+```
+
+#### Step 3: Make Plugin Capabilities Available
+
+Treat plugin components like core components:
+
+**Plugin Skills**:
+- Same activation pattern as core skills
+- Check "Activates for" keywords in SKILL.md
+- Follow workflow when relevant
+
+**Plugin Agents**:
+- Adopt role when needed (like core agents)
+- Example: "Adopting github-manager agent role..."
+
+**Plugin Commands**:
+- Load command file when user requests action
+- Example: User says "sync to GitHub" → Load `plugins/specweave-github/commands/github-sync.md`
+
+#### Step 4: Document Loaded Plugins
+
+At session start, note which plugins are active:
+
+```markdown
+# Session Context
+- Core skills: ✅ Loaded from .claude/skills/
+- Core agents: ✅ Loaded from .claude/agents/
+- Plugins detected:
+  - specweave-github: ✅ Loaded (2 skills, 1 agent, 4 commands)
+  - specweave-jira: ✅ Loaded (1 skill, 1 agent, 2 commands)
+```
+
+### Why Manual Loading Is Required
+
+**Claude Code**: Has native plugin marketplace, auto-loads plugins, manages dependencies.
+
+**Other Tools**: No plugin system, so you must:
+- ✅ Discover plugins in `plugins/` folder
+- ✅ Read plugin skills/agents/commands manually
+- ✅ Make them available in your context
+- ✅ Use them like core components
+
+**This is NOT optional** - plugins extend SpecWeave capabilities. Without loading them, you're missing critical functionality (GitHub sync, Jira integration, tech-specific skills, etc.).
+
+### Example: Session Start Routine (Non-Claude Tools)
+
+```bash
+# 1. Load core components
+cat .claude/skills/SKILLS-INDEX.md  # Core skills index
+cat AGENTS.md                        # This file
+
+# 2. Check for plugins
+if [ -d "plugins" ]; then
+  # 3. For each plugin, load components
+  for plugin in plugins/*/; do
+    echo "Loading plugin: $(basename $plugin)"
+
+    # Load all skills
+    find "$plugin/skills" -name "SKILL.md" -exec cat {} \;
+
+    # Load all agents
+    find "$plugin/agents" -name "AGENT.md" -exec cat {} \;
+
+    # Note available commands
+    ls "$plugin/commands/"
+  done
+fi
+
+# 4. Now ready to work with full SpecWeave capabilities
+```
+
+### Plugin Naming Convention
+
+Plugin commands use namespace pattern:
+
+**Core commands** (no namespace):
+- `/specweave:increment` → Core framework
+- `/specweave:do` → Core framework
+- `/specweave:progress` → Core framework
+
+**Plugin commands** (with namespace):
+- `/specweave:github:sync` → GitHub plugin
+- `/specweave:github:create-issue` → GitHub plugin
+- `/specweave:jira:sync` → Jira plugin
+- `/specweave:jira:create-ticket` → Jira plugin
+
+**In non-Claude tools**: Read the command file when user requests the action:
+```bash
+# User: "Sync this increment to GitHub"
+# You: Load and execute command
+cat plugins/specweave-github/commands/github-sync.md
+# Then follow the instructions in that file
+```
+
+---
+
+## 🚀 SpecWeave Commands (Executable Workflows)
+
+**⚡ CRITICAL FOR NON-CLAUDE TOOLS**: Commands are NOT automatic in GitHub Copilot, Cursor, or other tools. You MUST manually discover and execute them.
+
+### What Are Commands?
+
+Commands are **executable workflows** defined as `.md` files in `plugins/specweave/commands/`. Each file contains:
+- Command name (from filename, e.g., `specweave-increment.md` → `/specweave:increment`)
+- Complete workflow instructions
+- Parameters and usage examples
+- Step-by-step execution guide
+
+**Think of them as runnable scripts** - when user requests a command, you read the file and execute the workflow.
+
+### Command Discovery (MANDATORY!)
+
+**At the start of EVERY session**, discover available commands:
+
+```bash
+# List all core commands
+ls plugins/specweave/commands/
+
+# Common output:
+# specweave-increment.md  - Plan new increment (/specweave:increment "feature")
+# specweave-do.md         - Execute implementation (/specweave:do)
+# specweave-done.md       - Close increment (/specweave:done 0001)
+# specweave-validate.md   - Validate increment (/specweave:validate 0001)
+# specweave-progress.md   - Check status (/specweave:progress)
+# specweave-sync-docs.md  - Sync living docs (/specweave:sync-docs)
+# specweave-next.md       - Smart increment transition (/specweave:next)
+# specweave-costs.md      - Display AI cost dashboard (/specweave:costs)
+# specweave-translate.md  - Translate content (/specweave:translate)
+# tdd-*.md        - TDD workflow commands
+# ... (17 commands total)
+```
+
+**For plugin commands** (if plugins/ folder exists):
+
+```bash
+# List plugin commands
+ls plugins/specweave-github/commands/
+
+# Example output:
+# github-create-issue.md
+# github-sync.md
+# github-close-issue.md
+# github-status.md
+```
+
+### How to Execute Commands (Step-by-Step)
+
+**When user says**: "create new increment for user auth" or "run /specweave:increment user auth"
+
+**You should**:
+
+1. **Identify the command**:
+   - Keywords match: "create increment" → `specweave-increment.md`
+   - Explicit slash: "/specweave:increment" → `specweave-increment.md`
+   - Map request to command file
+
+2. **Read the command file**:
+   ```bash
+   cat plugins/specweave/commands/specweave-increment.md
+   ```
+
+3. **Parse the workflow**:
+   - Read YAML frontmatter for metadata
+   - Read markdown body for steps
+   - Note required parameters
+   - Understand expected output
+
+4. **Execute the workflow**:
+   - Follow instructions EXACTLY as written
+   - Use parameters from user request
+   - Reference related files (spec templates, etc.)
+   - Show progress as you work
+
+5. **Provide output**:
+   - Confirm completion
+   - Show created files
+   - Suggest next steps
+
+### Example: Executing /specweave:increment Command
+
+**User says**: "create new increment for user authentication"
+
+**Your workflow**:
+
+```bash
+# Step 1: Identify command
+# "create increment" → specweave-increment.md
+
+# Step 2: Read command file
+cat plugins/specweave/commands/specweave-increment.md
+```
+
+**After reading specweave-increment.md, you learn**:
+- This is PM-led increment planning
+- Requires: feature description
+- Creates: spec.md, plan.md, tasks.md, tests.md
+- Location: `.specweave/increments/####-feature-name/`
+
+**Step 3: Execute workflow from inc.md**:
+
+```markdown
+# You see these instructions in inc.md:
+
+1. **Detect tech stack** (TypeScript, Python, Go, etc.)
+2. **PM-led planning**:
+   - Market research
+   - Create spec.md (WHAT & WHY)
+   - Create plan.md (HOW)
+   - Auto-generate tasks.md from plan
+   - Create tests.md (test strategy)
+3. **Strategic agent review**:
+   - Architect designs system
+   - Security reviews threats
+   - QA defines test strategy
+4. **User review checkpoint**
+5. **Ready to build**
+```
+
+**Step 4: Execute those steps**:
+
+```
+📂 Creating increment 0001-user-authentication...
+
+🔍 Tech stack detected: TypeScript + Node.js + PostgreSQL
+
+👔 Adopting PM role to create spec.md...
+   ✓ Market research: Auth requirements
+   ✓ User stories: Login, Register, Password Reset
+   ✓ Acceptance criteria: TC-0001 to TC-0015
+   ✓ Created spec.md (WHAT & WHY, technology-agnostic)
+
+🏗️ Adopting Architect role to create plan.md...
+   ✓ Architecture: JWT + bcrypt + Prisma
+   ✓ API contracts: POST /auth/login, /auth/register
+   ✓ Data model: User table schema
+   ✓ Created plan.md (HOW, technology-specific)
+
+📋 Auto-generating tasks.md from plan.md...
+   ✓ Generated 42 tasks with model hints
+   ✓ Estimated: 3-4 weeks
+
+🧪 Creating tests.md (QA strategy)...
+   ✓ 12 test cases, 85% coverage target
+
+✅ Increment 0001-user-authentication ready!
+
+Next: /specweave:do (execute implementation)
+```
+
+**Step 5: Confirm completion**:
+
+```
+✅ Created increment 0001-user-authentication
+
+Files:
+  • .specweave/increments/0001-user-authentication/spec.md
+  • .specweave/increments/0001-user-authentication/plan.md
+  • .specweave/increments/0001-user-authentication/tasks.md
+  • .specweave/increments/0001-user-authentication/tests.md
+
+Next steps:
+  1. Review generated files
+  2. Run: /specweave:do (execute implementation)
+```
+
+### Core Command Reference
+
+**Most Common** (use these daily):
+
+| Command | File | Purpose | Example |
+|---------|------|---------|---------|
+| `/specweave:increment` | `specweave-increment.md` | Plan new increment | `/specweave:increment "user auth"` |
+| `/specweave:do` | `specweave-do.md` | Execute implementation | `/specweave:do` |
+| `/specweave:done` | `specweave-done.md` | Close increment | `/specweave:done 0001` |
+| `/specweave:validate` | `specweave-validate.md` | Validate quality | `/specweave:validate 0001` |
+| `/specweave:progress` | `specweave-progress.md` | Check status | `/specweave:progress` |
+
+**Specialized** (use when needed):
+
+| Command | File | Purpose | Example |
+|---------|------|---------|---------|
+| `/specweave:sync-docs` | `specweave-sync-docs.md` | Sync living docs | `/specweave:sync-docs update` |
+| `/specweave:next` | `specweave-next.md` | Smart increment transition | `/specweave:next` |
+| `/specweave:costs` | `specweave-costs.md` | AI cost dashboard | `/specweave:costs 0001` |
+| `/specweave:translate` | `specweave-translate.md` | Translate content | `/specweave:translate ru` |
+| `/specweave:tdd-cycle` | `specweave-tdd-cycle.md` | TDD workflow | `/specweave:tdd-cycle` |
+
+**Plugin Commands** (when plugins installed):
+
+| Command | File | Purpose | Plugin |
+|---------|------|---------|--------|
+| `/github:sync` | `plugins/specweave-github/commands/github-sync.md` | Sync to GitHub | specweave-github |
+| `/github:create-issue` | `plugins/specweave-github/commands/github-create-issue.md` | Create GitHub issue | specweave-github |
+| `/sync-tasks` | `commands/sync-tasks.md` | Sync tasks.md status | specweave (core) |
+
+---
+
+### 🚨 CRITICAL: Task Completion Tracking
+
+**Problem**: Commands like `/progress`, `/validate`, `/done` rely on `tasks.md` status being accurate.
+If tasks.md shows "1/24 complete" but you've actually finished 24 tasks, everything breaks!
+
+**Solution**: Update `tasks.md` after EACH task completes.
+
+#### For Claude Code Users (Automatic ✅)
+
+**Good news**: This happens automatically via `post-task-completion.sh` hook!
+
+When you complete a task (mark todo as done), the hook:
+1. ✅ Detects completion
+2. ✅ Updates corresponding task in tasks.md
+3. ✅ Recalculates progress %
+4. ✅ Syncs to GitHub issue (if enabled)
+
+**You don't need to do anything manually!**
+
+#### For Other AI Tools (Manual ⚠️)
+
+**⚠️ IMPORTANT**: After completing EACH task, manually update tasks.md:
+
+**Step-by-Step**:
+
+```bash
+# Example: You just completed T-001
+
+# 1. Open tasks.md
+vim .specweave/increments/0007-feature-name/tasks.md
+
+# 2. Find the task you completed
+#### T-001: Implement authentication service
+
+# 3. Change status from pending to completed
+**Status**: [ ] pending
+# ↓ Change to ↓
+**Status**: [x] completed
+
+# 4. Update progress counters at the top
+**Completed**: 0  # ← Increment this (0 → 1)
+**Progress**: 0%  # ← Recalculate (1/24 = 4%)
+
+# 5. Save and commit
+git add .specweave/increments/0007-feature-name/tasks.md
+git commit -m "chore: mark T-001 as complete"
+```
+
+**Why This Matters**:
+- `/progress` shows accurate completion % ✅
+- `/validate` checks pass ✅
+- `/done` can close the increment ✅
+- Team knows real status ✅
+
+**Validation Check**:
+```bash
+# Verify tasks.md is in sync
+/sync-tasks --validate
+
+# If out of sync:
+/sync-tasks  # Auto-fix from GitHub or git history
+```
+
+**Quick Reference Card** (print and keep handy):
+
+```
+┌────────────────────────────────────────────────┐
+│  AFTER EACH TASK: Update tasks.md Status      │
+├────────────────────────────────────────────────┤
+│  1. Open: .specweave/increments/XXXX/tasks.md │
+│  2. Find: #### T-XXX                           │
+│  3. Change: [ ] pending → [x] completed        │
+│  4. Update: Completed count & Progress %       │
+│  5. Commit: git commit -m "chore: mark done"   │
+└────────────────────────────────────────────────┘
+```
+
+---
+
+### Command Execution Pattern (Template)
+
+Use this pattern for ANY command execution:
+
+```bash
+# 1. User request
+# User: "sync to GitHub"
+
+# 2. Identify command
+# Keywords: "sync", "GitHub" → github-sync.md
+
+# 3. Read command file
+cat plugins/specweave-github/commands/github-sync.md
+
+# 4. Parse workflow
+# - Requires: increment ID, GitHub token
+# - Creates: GitHub issue
+# - Syncs: tasks, progress, labels
+
+# 5. Execute workflow
+# Follow steps in github-sync.md:
+#   - Load increment
+#   - Create/update GitHub issue
+#   - Sync task checklist
+#   - Add labels and milestone
+#   - Post comment with summary
+
+# 6. Confirm completion
+# "✅ Synced increment 0001 to GitHub issue #42"
+```
+
+### Why This Matters (Claude Code vs Other Tools)
+
+**Claude Code** (automatic):
+- Commands work via native slash syntax: `/inc "feature"`
+- No manual reading needed
+- Commands execute automatically
+
+**Other Tools** (manual):
+- ❌ No native command support
+- ✅ **Solution**: Read command .md file and execute workflow
+- Commands become "pseudo-executable" via this pattern
+- Same workflows, just manual discovery
+
+**GitHub Copilot Example**:
+
+```
+User: "create increment for payments"
+
+Copilot (you):
+1. Recognize command request: "create increment" → /inc
+2. Read: cat plugins/specweave/commands/inc.md
+3. Execute: Follow PM-led workflow from inc.md
+4. Create: spec.md, plan.md, tasks.md in .specweave/increments/0002-payments/
+5. Confirm: "✅ Increment 0002-payments created"
+
+User gets SAME result as Claude Code, just via manual execution!
+```
+
+### Command Discovery Checklist (Session Start)
+
+**MANDATORY for non-Claude tools**:
+
+```bash
+# 1. Discover core commands
+ls plugins/specweave/commands/
+# Note: 17 commands available (inc, do, done, validate, etc.)
+
+# 2. Check for plugin commands
+if [ -d "plugins/specweave-github" ]; then
+  ls plugins/specweave-github/commands/
+  # Note: 4 GitHub commands available
+fi
+
+# 3. Document available commands
+echo "Session Context:
+- Core commands: 17 available (inc, do, done, validate, ...)
+- Plugin commands: 4 GitHub commands (if plugin installed)
+- Command execution: Read .md file → Execute workflow
+"
+
+# 4. Ready to execute commands when requested
+```
+
+### Advanced: Batch Command Execution
+
+Some workflows require multiple commands:
+
+**Example**: Complete increment lifecycle
+
+```bash
+# User: "Plan, build, and close user auth feature"
+
+# Step 1: Execute /inc
+cat plugins/specweave/commands/inc.md
+# → Create spec.md, plan.md, tasks.md
+
+# Step 2: Execute /do
+cat plugins/specweave/commands/do.md
+# → Execute all 42 tasks
+
+# Step 3: Execute /validate
+cat plugins/specweave/commands/validate.md
+# → Quality checks
+
+# Step 4: Execute /done
+cat plugins/specweave/commands/done.md
+# → PM validation and closure
+```
+
+### Troubleshooting
+
+**Command file not found?**
+
+```bash
+# Check if command exists
+ls plugins/specweave/commands/ | grep inc
+# If not found, command doesn't exist
+
+# Check plugin commands
+ls plugins/specweave-*/commands/
+```
+
+**Command syntax unclear?**
+
+```bash
+# Read command README
+cat plugins/specweave/commands/README.md
+# Contains overview of all commands
+```
+
+**Command fails during execution?**
+
+- Re-read command file for missed steps
+- Check required files exist (spec.md, plan.md, etc.)
+- Verify parameters are correct
+- Check error messages for hints
+
+### Summary: Making Commands Work Without Claude Code
+
+**The Key Insight**: Commands are just markdown files with workflows!
+
+1. **Discover**: `ls plugins/specweave/commands/`
+2. **Read**: `cat plugins/specweave/commands/{command}.md`
+3. **Execute**: Follow the workflow in the file
+4. **Confirm**: Show completion and next steps
+
+**Result**: GitHub Copilot, Cursor, and other tools get the SAME SpecWeave command capabilities as Claude Code, just via manual execution instead of slash syntax.
+
+**This is CRITICAL** - without command execution, you're missing 90% of SpecWeave's automation!
+
+---
+
+## Available Agents (Specialized Roles)
+
+SpecWeave uses role-based development. When working on tasks, adopt the appropriate role:
+
+
+
+### How to Use Agents
+
+**In Claude Code** (automatic):
+- Agents activate automatically when needed
+- Separate context windows for each role
+
+**In other tools** (manual):
+- Read the agent file: `.claude/agents/{agent-name}/AGENT.md`
+- Adopt that role's perspective and responsibilities
+- Example: "Adopting PM role to create spec.md..."
+
+---
+
+## 🎯 CRITICAL: Skills Are Your Expert Manuals (Read First!)
+
+**MANDATORY**: Before starting ANY implementation task, check for relevant skills.
+
+### What Are Skills?
+
+Skills are **specialized expert manuals** that contain:
+- Proven workflows for specific tasks
+- SpecWeave conventions and best practices
+- Required files to read and tools to use
+- Step-by-step instructions
+- Examples and test cases
+
+**There are 34+ skills available** organized into categories:
+- **Framework Core**: increment-planner, context-loader, context-optimizer
+- **External Integrations**: jira-sync, ado-sync, github-sync
+- **Architecture & Design**: diagrams-architect, design-system-architect
+- **Development**: frontend, nodejs-backend, python-backend, nextjs, dotnet-backend
+- **Quality & Testing**: increment-quality-judge, e2e-playwright
+- **Infrastructure**: hetzner-provisioner, cost-optimizer
+- **Documentation**: docusaurus, figma-to-code, figma-designer
+- **Orchestration**: role-orchestrator, skill-router, spec-driven-brainstorming
+
+### Progressive Disclosure Pattern (How to Use Skills)
+
+**STEP 1: Discovery (Always Start Here)**
+
+Before starting ANY task, read the skills index:
+
+```bash
+cat .claude/skills/SKILLS-INDEX.md
+```
+
+This single file contains ALL available skills with their activation keywords. **This is your first stop for every task.**
+
+**STEP 2: Matching**
+
+Look for skills whose "Activates for" keywords match your current task:
+
+| Your Task | Relevant Skill | Keywords |
+|-----------|---------------|----------|
+| "Plan a new feature for user auth" | `increment-planner` | "feature planning", "create increment" |
+| "Sync this to JIRA" | `jira-sync` | "JIRA sync", "create JIRA issue" |
+| "Create architecture diagram" | `diagrams-architect` | "architecture diagram", "C4 diagram" |
+| "Implement React component" | `frontend` | "React", "components", "UI" |
+| "Deploy to cloud" | `hetzner-provisioner` or `cost-optimizer` | "deploy", "hosting", "infrastructure" |
+| "Quality check" | `increment-quality-judge` | "validate quality", "quality check" |
+| "E2E test" | `e2e-playwright` | "E2E test", "browser automation" |
+| "Generate docs site" | `docusaurus` | "documentation site", "docs" |
+
+**STEP 3: Load Full Skill**
+
+Once you've identified 1-3 relevant skills, load their full documentation:
+
+```bash
+cat .claude/skills/{skill-name}/SKILL.md
+```
+
+**STEP 4: Execute Workflow**
+
+Follow the skill's instructions precisely:
+- Read required files listed in skill
+- Use recommended tools
+- Follow step-by-step workflow
+- Apply SpecWeave best practices
+
+### Why This Matters (Token Savings + Quality)
+
+**Scenario**: User asks to plan a new feature
+
+**Without skills** (bad):
+```
+❌ Read entire .specweave/docs/ folder (50k tokens)
+❌ Guess at SpecWeave conventions
+❌ Create inconsistent increment structure
+❌ Miss context-manifest.yaml (no token savings)
+❌ Reinvent workflow from scratch
+Result: High token cost, inconsistent output
+```
+
+**With skills** (good):
+```
+✅ Read SKILLS-INDEX.md (2k tokens)
+✅ Match "plan feature" → increment-planner skill
+✅ Load increment-planner SKILL.md (3k tokens)
+✅ Follow proven workflow with templates
+✅ Create proper context-manifest.yaml (70% token savings)
+Result: 5k tokens vs 50k = 90% savings + higher quality
+```
+
+### Skills vs Agents (What's the Difference?)
+
+**Skills = Capabilities (WHAT you can do)**
+- increment-planner: Creates feature plans
+- jira-sync: Syncs with external tools
+- diagrams-architect: Creates diagrams
+- **Use skills for workflows and procedures**
+
+**Agents = Roles (WHO you become)**
+- PM: Product manager perspective
+- Architect: Technical design perspective
+- DevOps: Infrastructure perspective
+- **Use agents when you need to adopt a specific role/perspective**
+
+### For Non-Claude Code Users
+
+**GitHub Copilot, Cursor, Windsurf, etc.:**
+
+Since these tools don't have native skill support, you MUST:
+
+1. **At session start**: Always read `SKILLS-INDEX.md` first
+2. **Before each task**: Check if relevant skills exist
+3. **During execution**: Follow skill workflows precisely
+4. **When stuck**: Re-read the relevant SKILL.md
+
+**Treat this as mandatory**, not optional. Skills are the difference between:
+- Inconsistent ad-hoc work ❌
+- Professional SpecWeave-compliant output ✅
+
+---
+
+## Available Skills (Specialized Capabilities)
+
+SpecWeave has specialized capabilities for different tasks:
+
+
+
+### How to Use Skills
+
+**In Claude Code** (automatic):
+- Skills activate based on keywords in your request
+- No manual invocation needed
+- Claude reads SKILLS-INDEX.md at startup
+- Full SKILL.md loaded when relevant
+
+**In other tools** (manual):
+- Read `.claude/skills/SKILLS-INDEX.md` first (mandatory)
+- Match task to activation keywords
+- Load full skill: `.claude/skills/{skill-name}/SKILL.md`
+- Follow the workflow precisely
+- Example: "Following increment-planner skill workflow..."
+
+---
+
+## Common Workflows
+
+### Creating a Feature Increment
+
+**Step 1: Create Increment Folder**
+```bash
+mkdir -p .specweave/increments/0001-feature-name
+cd .specweave/increments/0001-feature-name
+```
+
+**Step 2: Create spec.md (Adopt PM Role)**
+- Focus on WHAT and WHY (not HOW)
+- Technology-agnostic requirements
+- User stories with acceptance criteria
+
+Template:
+```markdown
+---
+increment: 0001-feature-name
+title: "Feature Title"
+priority: P1
+status: planned
+---
+
+# Increment 0001: Feature Name
+
+## Overview
+[Problem statement and solution]
+
+## User Stories
+
+### US-001: User Story Title
+**As a** [role]
+**I want to** [action]
+**So that** [benefit]
+
+**Acceptance Criteria**:
+- [ ] TC-0001: [testable condition]
+- [ ] TC-0002: [testable condition]
+```
+
+**Step 3: Create plan.md (Adopt Architect Role)**
+- Focus on HOW (technical implementation)
+- Technology-specific details
+- Component design, data models, APIs
+
+Template:
+```markdown
+# Technical Plan: Feature Name
+
+## Architecture
+[Component design]
+
+## Data Model
+[Database schema]
+
+## API Contracts
+[Endpoints, request/response]
+
+## Implementation Strategy
+[Step-by-step approach]
+```
+
+**Step 4: Create tasks.md**
+```markdown
+---
+increment: 0001-feature-name
+total_tasks: 10
+completed_tasks: 0
+---
+
+# Implementation Tasks
+
+- [ ] T001: Task description
+- [ ] T002: Task description
+```
+
+**Step 5: Create context-manifest.yaml (CRITICAL)**
+```yaml
+spec_sections:
+  - .specweave/docs/internal/strategy/relevant-spec.md
+documentation:
+  - .specweave/docs/internal/architecture/relevant-design.md
+max_context_tokens: 10000
+```
+
+### Context Loading (70%+ Token Savings)
+
+**CRITICAL RULE**: Always read `context-manifest.yaml` first!
+
+**Why?**
+- Full specs: 500+ pages (50k tokens) ❌
+- Manifest files: 50 pages (5k tokens) ✅
+- **Savings: 90% = 45k tokens saved!**
+
+**How:**
+1. Navigate to increment folder
+2. Read `context-manifest.yaml`
+3. Load ONLY files listed in manifest
+4. Do NOT load entire `.specweave/docs/` folder
+
+### Working with Slash Commands (Claude Code)
+
+If using Claude Code, these slash commands are available:
+
+**Core Commands** (always available):
+| Command | Purpose | Example |
+|---------|---------|---------|
+| `/specweave:increment` | Create new increment | `/specweave:increment "user authentication"` |
+| `/specweave:do` | Execute implementation | `/specweave:do` |
+| `/specweave:progress` | Check status | `/specweave:progress` |
+| `/specweave:done` | Close increment | `/specweave:done 0001` |
+| `/specweave:validate` | Validate quality | `/specweave:validate 0001 --quality` |
+
+**Plugin Commands** (when plugin installed):
+| Command | Purpose | Plugin |
+|---------|---------|--------|
+| `/specweave:github:sync` | Sync to GitHub | specweave-github |
+| `/specweave:github:create-issue` | Create GitHub issue | specweave-github |
+| `/specweave:jira:sync` | Sync to Jira | specweave-jira |
+| `/specweave:jira:create-ticket` | Create Jira ticket | specweave-jira |
+
+**For non-Claude tools**: Read the command file when user requests the action:
+```bash
+# User: "Sync to GitHub"
+cat plugins/specweave-github/commands/github-sync.md
+# Then follow instructions in that file
+```
+
+---
+
+## Build & Test Commands
+
+```bash
+# Install dependencies
+npm install
+
+# Build project
+npm run build
+
+# Run tests
+npm test
+
+# Run E2E tests (if applicable)
+npm run test:e2e
+
+# Type check
+npm run type-check
+
+# Lint
+npm run lint
+```
+
+---
+
+## Code Style Guidelines
+
+### Specification Files
+
+**spec.md** (Technology-Agnostic):
+- Focus on WHAT and WHY, not HOW
+- Use user stories (US-001, US-002, ...)
+- Use acceptance criteria (TC-0001, TC-0002, ...)
+- No technology-specific details
+
+**plan.md** (Technology-Specific):
+- Focus on HOW to implement
+- Include component designs, data models, APIs
+- Reference ADRs (Architecture Decision Records)
+- Technology stack details
+
+### Code Organization
+
+**ALL supporting files belong to an increment:**
+- Logs → `.specweave/increments/{id}/logs/`
+- Scripts → `.specweave/increments/{id}/scripts/`
+- Reports → `.specweave/increments/{id}/reports/`
+- NEVER create supporting files in project root
+
+**Benefits:**
+- Complete traceability (know which increment created which files)
+- Easy cleanup (delete increment folder = delete all related files)
+- Clear context (all files for a feature in one place)
+
+---
+
+## Testing Strategy
+
+**Four Levels of Test Cases**:
+
+1. **Specification** (`.specweave/docs/internal/strategy/`) - TC-0001 acceptance criteria
+2. **Feature** (`.specweave/increments/####/tests.md`) - Test coverage matrix
+3. **Skill** (`src/skills/{name}/test-cases/`) - YAML test cases (if creating skills)
+4. **Code** (`tests/`) - Automated tests (Unit, Integration, E2E)
+
+**Requirements:**
+- E2E tests (Playwright/Cypress) when UI exists
+- >80% coverage for critical paths
+- Tests MUST tell the truth (no false positives)
+
+---
+
+## 📝 Documentation Updates (CRITICAL FOR NON-CLAUDE TOOLS)
+
+**IMPORTANT**: Claude Code has automatic hooks that remind you to update documentation. **GitHub Copilot, Cursor, and other tools DO NOT have these hooks!**
+
+### You MUST Manually Update Documentation After Every Task
+
+When you complete ANY task (implementation, bug fix, refactoring), you MUST update:
+
+#### 1. Living Docs (.specweave/docs/)
+
+After implementing features, update strategic documentation:
+
+**Strategy Docs** (`.specweave/docs/internal/strategy/`):
+- Update PRDs when requirements change
+- Add new user stories if scope expanded
+- Document discovered requirements
+
+**Architecture Docs** (`.specweave/docs/internal/architecture/`):
+- Update HLD (high-level design) when architecture changes
+- Update LLD (low-level design) when components change
+- Update ADRs from "Proposed" → "Accepted" after implementation
+- Add new ADRs for significant decisions made during implementation
+
+**Delivery Docs** (`.specweave/docs/internal/delivery/`):
+- Update deployment guides after infrastructure changes
+- Update CI/CD docs after pipeline modifications
+
+**Operations Docs** (`.specweave/docs/internal/operations/`):
+- Update runbooks after operational changes
+- Update monitoring/alerting docs
+
+#### 2. Increment Documentation
+
+**Always update these files in `.specweave/increments/{increment-id}/`**:
+
+```bash
+# Update implementation status
+vim .specweave/increments/0001-feature/plan.md
+# Add: "## Implementation Notes" section with learnings
+
+# Update task checklist
+vim .specweave/increments/0001-feature/tasks.md
+# Mark completed: - [x] T001: Task description
+
+# Document completion
+vim .specweave/increments/0001-feature/reports/completion-report.md
+# Add: Summary of what was implemented, challenges, solutions
+```
+
+#### 3. Project Documentation
+
+**CLAUDE.md or AGENTS.md** (this file):
+- Update when project structure changes
+- Add new workflows or commands
+- Update "Current Work" section
+
+**README.md** (user-facing):
+- Update when features are added
+- Update installation instructions if changed
+- Update usage examples
+
+**CHANGELOG.md** (version history):
+- Add entries for all user-facing changes
+- Format: `## [version] - date` with bullet points
+
+#### 4. Code Documentation
+
+**Inline comments**:
+- Add JSDoc/TSDoc for new functions
+- Update existing comments if behavior changes
+- Explain "why" not just "what"
+
+### When to Update (Checklist)
+
+After you:
+- ✅ Complete a task → Update increment tasks.md
+- ✅ Implement a feature → Update living docs (architecture, strategy)
+- ✅ Make architecture decision → Create or update ADR
+- ✅ Change project structure → Update CLAUDE.md/AGENTS.md
+- ✅ Add user-facing feature → Update README.md
+- ✅ Fix a bug → Update CHANGELOG.md
+- ✅ Change API → Update API documentation
+- ✅ Modify deployment → Update deployment guide
+
+### Example Workflow (GitHub Copilot/Cursor Users)
+
+```markdown
+# After completing "Implement user authentication" task:
+
+1. Update living docs:
+   echo "## Implementation Notes
+   - Used JWT for stateless authentication
+   - Password hashing with bcrypt
+   - Session timeout: 24 hours
+   " >> .specweave/increments/0001-auth/plan.md
+
+2. Update architecture:
+   vim .specweave/docs/internal/architecture/hld-system.md
+   # Add authentication component diagram
+
+3. Create ADR:
+   vim .specweave/docs/internal/architecture/adr-003-jwt-authentication.md
+
+4. Update README:
+   vim README.md
+   # Add authentication usage example
+
+5. Update CHANGELOG:
+   echo "### Added
+   - User authentication with JWT
+   - Password reset flow
+   " >> CHANGELOG.md
+
+6. Mark task complete:
+   vim .specweave/increments/0001-auth/tasks.md
+   # Change [ ] to [x] for completed tasks
+```
+
+### Why This Matters
+
+**Without documentation updates**:
+- ❌ Specs diverge from implementation (specs become useless)
+- ❌ Team members don't know what changed
+- ❌ Future AI sessions have outdated context
+- ❌ SpecWeave's core principle (living documentation) breaks down
+
+**With documentation updates**:
+- ✅ Specs stay synchronized with code
+- ✅ Clear audit trail of changes
+- ✅ AI agents have accurate context
+- ✅ Team members stay informed
+- ✅ SpecWeave philosophy is maintained
+
+### Tools That Need Manual Updates
+
+These tools **DO NOT** have automatic documentation hooks:
+- GitHub Copilot (all versions)
+- Cursor
+- Windsurf
+- Gemini CLI
+- Generic AI tools (ChatGPT, Claude web, etc.)
+
+Only **Claude Code** has automatic hooks that remind you to update docs.
+
+---
+
+## 🔗 External Tracker Sync (CRITICAL FOR NON-CLAUDE TOOLS)
+
+**IMPORTANT**: Claude Code has automatic hooks that sync to external trackers (GitHub Issues, Jira, Azure DevOps) after each task completion. **GitHub Copilot, Cursor, and other tools DO NOT have these hooks!**
+
+### You MUST Manually Sync to External Trackers After Every Task
+
+When you complete ANY task, you MUST sync progress to external trackers if they are enabled for the project.
+
+#### Step 1: Detect Which Trackers Are Enabled
+
+Check the current increment's `metadata.json`:
+
+```bash
+# Find current increment (latest non-backlog increment)
+CURRENT_INCREMENT=$(ls -t .specweave/increments/ 2>/dev/null | grep -v "_backlog" | head -1)
+
+# Check metadata
+cat .specweave/increments/$CURRENT_INCREMENT/metadata.json
+```
+
+**Example metadata.json**:
+```json
+{
+  "id": "0007-smart-increment-discipline",
+  "title": "Increment Management v2.0",
+  "status": "active",
+  "github": {
+    "issue": 4,
+    "url": "https://github.com/anton-abyzov/specweave/issues/4"
+  },
+  "jira": {
+    "issue": "PROJ-123",
+    "url": "https://company.atlassian.net/browse/PROJ-123"
+  },
+  "ado": {
+    "item": 456,
+    "url": "https://dev.azure.com/org/project/_workitems/edit/456"
+  }
+}
+```
+
+#### Step 2: Sync to Each Enabled Tracker
+
+**For GitHub** (if `github.issue` exists):
+
+```bash
+# Get issue number
+GITHUB_ISSUE=$(jq -r '.github.issue' .specweave/increments/$CURRENT_INCREMENT/metadata.json)
+
+# Post progress comment
+gh issue comment "$GITHUB_ISSUE" --body "Progress update: Task T-XXX completed in increment $CURRENT_INCREMENT
+
+Details:
+- Task: [Task description]
+- Status: Completed
+- Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+Next: [Next task or completion status]
+"
+```
+
+**For Jira** (if `jira.issue` exists):
+
+```bash
+# Get issue key
+JIRA_ISSUE=$(jq -r '.jira.issue' .specweave/increments/$CURRENT_INCREMENT/metadata.json)
+
+# Add comment (requires jira CLI: https://github.com/ankitpokhrel/jira-cli)
+jira issue comment add "$JIRA_ISSUE" "Progress update: Task T-XXX completed
+
+Details:
+- Task: [Task description]
+- Status: Completed
+- Increment: $CURRENT_INCREMENT
+"
+
+# Update status if task is major milestone
+# jira issue move "$JIRA_ISSUE" "In Progress" / "Review" / "Done"
+```
+
+**For Azure DevOps** (if `ado.item` exists):
+
+```bash
+# Get work item ID
+ADO_ITEM=$(jq -r '.ado.item' .specweave/increments/$CURRENT_INCREMENT/metadata.json)
+
+# Add comment (requires az CLI: https://aka.ms/azure-cli)
+az boards work-item update --id "$ADO_ITEM" --discussion "Progress update: Task T-XXX completed
+
+Details:
+- Task: [Task description]
+- Status: Completed
+- Increment: $CURRENT_INCREMENT
+"
+```
+
+#### Step 3: When to Sync
+
+**After EVERY task completion**, sync to all enabled trackers:
+
+```bash
+# Example workflow after completing T-003:
+
+# 1. Mark task complete in tasks.md
+vim .specweave/increments/0007-feature/tasks.md
+# Change: - [ ] T003: Task → - [x] T003: Task ✅
+
+# 2. Update increment documentation (plan.md, etc.)
+# [See "Documentation Updates" section above]
+
+# 3. Sync to external trackers
+gh issue comment 4 --body "✅ T-003 Complete: Create test-aware-planner structure
+
+Directory structure created at plugins/specweave/agents/test-aware-planner/
+
+Next: T-004 - Write test-aware-planner AGENT.md prompt
+"
+
+# 4. Continue to next task
+```
+
+#### Step 4: Update Task Checklist in GitHub/Jira
+
+**For GitHub Issues with task checklists**:
+
+The issue body likely contains a task checklist:
+
+```markdown
+## Tasks
+- [x] T-001: Update plan.md
+- [x] T-002: Add auto-sync hook
+- [ ] T-003: Create test-aware-planner structure
+- [ ] T-004: Write AGENT.md prompt
+```
+
+**Update the checklist** after each task:
+
+```bash
+# Get current issue body
+gh issue view 4 --json body -q .body > issue-body.md
+
+# Edit the checklist (mark T-003 as done)
+vim issue-body.md
+# Change: - [ ] T-003 → - [x] T-003
+
+# Update issue
+gh issue edit 4 --body-file issue-body.md
+```
+
+**For Jira** (subtasks):
+
+If tasks are represented as subtasks:
+
+```bash
+# List subtasks
+jira issue list --parent PROJ-123
+
+# Update subtask status
+jira issue move PROJ-123-SUB1 "Done"
+```
+
+#### Step 5: Sync Increment Status Changes
+
+When increment status changes (active → paused → completed), sync that too:
+
+```bash
+# Example: Increment completed
+gh issue comment 4 --body "🎉 INCREMENT COMPLETED!
+
+All 24 tasks finished. Increment 0007-smart-increment-discipline is now complete.
+
+See completion report: .specweave/increments/0007-smart-increment-discipline/reports/COMPLETION-SUMMARY.md
+"
+
+# Close the issue
+gh issue close 4 --comment "Increment completed and merged to main branch."
+```
+
+### Why This Matters
+
+**Without external tracker sync**:
+- ❌ Stakeholders don't see progress
+- ❌ Team members work in isolation
+- ❌ No audit trail of work done
+- ❌ GitHub/Jira becomes stale and useless
+
+**With external tracker sync**:
+- ✅ Real-time visibility into progress
+- ✅ Team stays informed
+- ✅ Stakeholders can track without asking
+- ✅ Complete audit trail
+- ✅ GitHub/Jira remains the source of truth
+
+### Tools That Need Manual Sync
+
+These tools **DO NOT** have automatic external tracker sync:
+- GitHub Copilot (all versions)
+- Cursor
+- Windsurf
+- Gemini CLI
+- Generic AI tools (ChatGPT, Claude web, etc.)
+
+Only **Claude Code** has automatic hooks (via `post-task-completion.sh`) that sync to external trackers.
+
+### Summary Checklist (After Every Task)
+
+When you complete a task in non-Claude tools:
+
+1. ✅ Mark task complete in tasks.md
+2. ✅ Update living docs (see "Documentation Updates" section)
+3. ✅ **Sync to GitHub/Jira/ADO** (this section)
+4. ✅ Update RFC if applicable (if task implements architecture decision)
+5. ✅ Continue to next task
+
+**Remember**: In Claude Code, steps 3-4 happen automatically via hooks. In other tools, YOU must do them manually!
+
+---
+
+## Security Considerations
+
+- Never commit secrets (use `.env` files, gitignored)
+- Follow principle of least privilege
+- Review security implications in ADRs
+- Use the `security` agent role for security reviews
+
+---
+
+## Finding the Right Agent or Skill
+
+When you encounter a new task:
+
+**Finding Skills:**
+1. Check this file (Available Skills section above)
+2. Browse: `ls .claude/skills/`
+3. Read: `.claude/skills/{skill-name}/SKILL.md`
+4. Follow the workflow
+
+**Finding Agents:**
+1. Check this file (Available Agents section above)
+2. Browse: `ls .claude/agents/`
+3. Read: `.claude/agents/{agent-name}/AGENT.md`
+4. Adopt the role
+
+**Pro Tips:**
+- Skills are capabilities (what you CAN do)
+- Agents are roles (who you BECOME to do it)
+- When stuck, ask: "Which SpecWeave skill or agent helps with [task]?"
+
+---
+
+## Important Reminders
+
+1. ✅ **Always read context-manifest.yaml first** (70%+ token savings)
+2. ✅ **Load only files listed in manifest** (not entire docs folder)
+3. ✅ **Adopt role when acting as agent** (PM, Architect, DevOps, etc.)
+4. ✅ **Technology-agnostic in spec.md** (WHAT/WHY only)
+5. ✅ **Technology-specific in plan.md** (HOW with details)
+6. ✅ **Use checkboxes in tasks.md** for tracking
+7. ✅ **All supporting files in increment folders** (never in root)
+8. 🔴 **UPDATE DOCUMENTATION AFTER EVERY TASK** (see "Documentation Updates" section above - CRITICAL for non-Claude tools!)
+
+---
+
+## Documentation
+
+- **CLAUDE.md**: Quick reference for Claude Code users
+- **SPECWEAVE.md**: Complete framework documentation (if exists)
+- **spec-weave.com**: Official website
+- **.specweave/docs/**: Project-specific documentation
+
+---
+
+**Generated by SpecWeave** - Specification-first AI development framework
+**Compatible with**: Claude Code, Cursor, Gemini CLI, Codex, GitHub Copilot, and more
+**Last Updated**: 2025-11-09
