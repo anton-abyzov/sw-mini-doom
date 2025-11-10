@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import path from 'path';
 
 export default defineConfig({
-  base: '/sw-mini-doom/',
+  base: process.env.NODE_ENV === 'production' ? '/sw-mini-doom/' : '/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
