@@ -88,7 +88,7 @@ export class Game {
 
   async init(): Promise<void> {
     // Load game configuration
-    const response = await fetch('/data/game-config.json');
+    const response = await fetch(`${import.meta.env.BASE_URL}data/game-config.json`);
     this.config = await response.json();
 
     // Setup lighting

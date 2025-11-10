@@ -19,6 +19,30 @@ tech_stack:
 # Platform
 platform: "web"
 estimated_cost: "$0/month (static hosting)"
+
+# Jira Integration
+jira:
+  project_key: "MINIDOOM"
+  epic_key: "MINIDOOM-1"
+  epic_url: "https://antonabyzov.atlassian.net/browse/MINIDOOM-1"
+  stories:
+    - key: "MINIDOOM-2"
+      title: "US-001: Player Movement"
+    - key: "MINIDOOM-3"
+      title: "US-002: Shooting Mechanics"
+    - key: "MINIDOOM-4"
+      title: "US-003: Enemy AI Behavior"
+    - key: "MINIDOOM-5"
+      title: "US-004: Damage and Health System"
+    - key: "MINIDOOM-6"
+      title: "US-005: Arena Map"
+    - key: "MINIDOOM-7"
+      title: "US-006: Game Loop and Win Conditions"
+    - key: "MINIDOOM-8"
+      title: "US-007: HUD and UI Elements"
+  last_sync: "2025-11-09T22:40:00Z"
+  sync_direction: "bidirectional"
+  sync_status: "fully_synced"
 ---
 
 # Increment 0001: 3D WebGL Shooter Game
