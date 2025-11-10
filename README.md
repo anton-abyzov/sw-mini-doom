@@ -1,10 +1,56 @@
-# sw-mini-doom
+# Mini Doom - 3D WebGL Shooter
 
-**A SpecWeave project** - where specifications drive development.
+**A browser-based 3D first-person shooter built with Three.js and TypeScript**
+
+Built using **SpecWeave** - where specifications drive development.
+
+## 🎮 About This Game
+
+Mini Doom is a complete 3D first-person shooter that runs in your browser. Battle AI-controlled enemies in an arena map using real-time shooting mechanics and tactical cover.
+
+### Features
+
+- ✅ First-person controls (WASD + mouse look)
+- ✅ Projectile-based combat with hit detection
+- ✅ Enemy AI with state machines (idle → chase → attack)
+- ✅ Health and damage systems
+- ✅ Arena map with obstacles for cover
+- ✅ Complete game loop (menu → play → victory/game over)
+- ✅ HUD with health bar, kill count, and timer
+
+### Tech Stack
+
+- **TypeScript 5.0+** (strict mode)
+- **Three.js r160** (3D rendering)
+- **Vite 5.0** (build tool)
+- **Entity Component System** architecture
+- **Custom collision detection** (AABB + ray-sphere)
 
 ## 🚀 Quick Start
 
-Your project is initialized! Now describe what you want to build.
+```bash
+# Install dependencies
+npm install
+
+# Start development server (opens http://localhost:3000)
+npm run dev
+
+# Build for production
+npm run build
+```
+
+### Controls
+
+| Input | Action |
+|-------|--------|
+| W/↑ | Move forward |
+| S/↓ | Move backward |
+| A/← | Strafe left |
+| D/→ | Strafe right |
+| Mouse | Look around |
+| Left Click | Shoot |
+
+**Objective**: Eliminate all 5 enemies to win!
 
 ### Next Steps
 

@@ -1,0 +1,130 @@
+%% Game Loop Flow Diagram - 3D WebGL Shooter Game
+%% Shows the execution flow of a single frame update
+
+flowchart TD
+    Start[Frame Start<br/>requestAnimationFrame] --> CalcDelta[Calculate Delta Time<br/>currentTime - lastTime]
+    CalcDelta --> StatsBegin[stats.js.begin]
+
+    StatsBegin --> Step1[Step 1: Input System<br/>Process keyboard/mouse events]
+    Step1 --> Input1{Keys Pressed?}
+    Input1 -->|Yes| Input2[Update player velocity<br/>based on WASD/Arrow keys]
+    Input1 -->|No| Input3[Velocity = 0]
+    Input2 --> Input4[Update player rotation<br/>based on mouse delta]
+    Input3 --> Input4
+    Input4 --> Step2
+
+    Step2[Step 2: AI System<br/>Update all enemies] --> AI1[Get all enemy entities]
+    AI1 --> AI2{For each enemy}
+    AI2 -->|Next| AI3[Get current AI state]
+
+    AI3 --> AIState{Current State?}
+
+    AIState -->|Idle| AIIdle[Check player distance<br/>Distance < 20?]
+    AIIdle -->|Yes| AIIdleChase[Transition to Chase]
+    AIIdle -->|No| AIIdleStay[Rotate slowly]
+    AIIdleChase --> AI2
+    AIIdleStay --> AI2
+
+    AIState -->|Chase| AIChase[Calculate direction<br/>to player]
+    AIChase --> AIChaseObs{Obstacle ahead?}
+    AIChaseObs -->|Yes| AIChaseAvoid[Turn 90 degrees]
+    AIChaseObs -->|No| AIChaseMove[Set velocity toward player]
+    AIChaseAvoid --> AIChaseCheck{Distance < 8?}
+    AIChaseMove --> AIChaseCheck
+    AIChaseCheck -->|Yes| AIChaseAttack[Transition to Attack]
+    AIChaseCheck -->|No| AI2
+    AIChaseAttack --> AI2
+
+    AIState -->|Attack| AIAttack[Face player<br/>Set velocity = 0]
+    AIAttack --> AIAttackShoot{Cooldown ready?}
+    AIAttackShoot -->|Yes| AIAttackFire[Spawn enemy projectile<br/>With accuracy variance]
+    AIAttackShoot -->|No| AIAttackWait[Wait]
+    AIAttackFire --> AIAttackRange{Distance > 8?}
+    AIAttackWait --> AIAttackRange
+    AIAttackRange -->|Yes| AIAttackChase[Transition to Chase]
+    AIAttackRange -->|No| AI2
+    AIAttackChase --> AI2
+
+    AIState -->|Dead| AIDead[Mark entity inactive]
+    AIDead --> AI2
+
+    AI2 -->|Done| Step3
+
+    Step3[Step 3: Movement System<br/>Apply velocities] --> Move1[Get all entities with<br/>Position + Velocity]
+    Move1 --> Move2{For each entity}
+    Move2 -->|Next| Move3[position += velocity * deltaTime]
+    Move3 --> Move2
+    Move2 -->|Done| Step4
+
+    Step4[Step 4: Collision System<br/>Detect and resolve] --> Coll1[Check entity-wall collisions<br/>AABB algorithm]
+    Coll1 --> Coll2{Collision detected?}
+    Coll2 -->|Yes| Coll3[Calculate overlap<br/>Move entity back<br/>Zero velocity]
+    Coll2 -->|No| Coll4
+    Coll3 --> Coll4[Check projectile-entity<br/>Ray-sphere algorithm]
+    Coll4 --> Coll5{Hit detected?}
+    Coll5 -->|Yes| Coll6[Mark projectile for destruction<br/>Queue damage event]
+    Coll5 -->|No| Step5
+    Coll6 --> Step5
+
+    Step5[Step 5: Projectile System<br/>Manage projectiles] --> Proj1[Get all active projectiles]
+    Proj1 --> Proj2{For each projectile}
+    Proj2 -->|Next| Proj3[Increment age += deltaTime]
+    Proj3 --> Proj4{Age > lifetime?}
+    Proj4 -->|Yes| Proj5[Destroy projectile<br/>Return to pool]
+    Proj4 -->|No| Proj6{Marked for destruction?}
+    Proj5 --> Proj2
+    Proj6 -->|Yes| Proj7[Destroy projectile]
+    Proj6 -->|No| Proj2
+    Proj7 --> Proj2
+    Proj2 -->|Done| Step6
+
+    Step6[Step 6: Health System<br/>Apply damage] --> Health1{Damage events queued?}
+    Health1 -->|Yes| Health2[Apply damage to entity<br/>health -= damageAmount]
+    Health1 -->|No| Step7
+    Health2 --> Health3{Health <= 0?}
+    Health3 -->|Yes| Health4[Set entity state = Dead<br/>Update game state]
+    Health3 -->|No| Health5[Visual feedback<br/>Flash mesh color]
+    Health4 --> Health6{Entity is player?}
+    Health5 --> Health1
+    Health6 -->|Yes| Health7[Game state = GameOver]
+    Health6 -->|No| Health8{All enemies dead?}
+    Health7 --> Step7
+    Health8 -->|Yes| Health9[Game state = Victory]
+    Health8 -->|No| Step7
+    Health9 --> Step7
+
+    Step7[Step 7: Render System<br/>Sync Three.js scene] --> Render1[Get all entities with<br/>Position + Mesh]
+    Render1 --> Render2{For each entity}
+    Render2 -->|Next| Render3[mesh.position.copy<br/>entity.position]
+    Render3 --> Render4[mesh.rotation.copy<br/>entity.rotation]
+    Render4 --> Render2
+    Render2 -->|Done| Render5[Update camera position<br/>from player entity]
+
+    Render5 --> RenderScene[renderer.render<br/>scene, camera]
+    RenderScene --> UpdateHUD[Update HUD<br/>health, kills, timer]
+    UpdateHUD --> StatsEnd[stats.js.end]
+
+    StatsEnd --> CheckState{Game State?}
+    CheckState -->|Playing| NextFrame[requestAnimationFrame<br/>next frame]
+    CheckState -->|Menu| MenuScreen[Show menu screen]
+    CheckState -->|GameOver| GameOverScreen[Show game over screen]
+    CheckState -->|Victory| VictoryScreen[Show victory screen]
+
+    NextFrame --> Start
+    MenuScreen --> WaitInput[Wait for user input]
+    GameOverScreen --> WaitInput
+    VictoryScreen --> WaitInput
+    WaitInput -->|Start/Restart| InitGame[Initialize game<br/>Reset entities]
+    InitGame --> Start
+
+    %% Styling
+    style Start fill:#4caf50,color:#fff
+    style Step1 fill:#2196f3,color:#fff
+    style Step2 fill:#ff9800,color:#fff
+    style Step3 fill:#9c27b0,color:#fff
+    style Step4 fill:#e91e63,color:#fff
+    style Step5 fill:#00bcd4,color:#fff
+    style Step6 fill:#ffc107,color:#000
+    style Step7 fill:#8bc34a,color:#fff
+    style RenderScene fill:#607d8b,color:#fff
+    style NextFrame fill:#4caf50,color:#fff

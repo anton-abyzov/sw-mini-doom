@@ -1,0 +1,58 @@
+{
+  "player": {
+    "health": 100,
+    "speed": 10.0,
+    "fireRate": 5.0,
+    "damage": 25,
+    "projectileSpeed": 60
+  },
+  "enemy": {
+    "health": 50,
+    "speed": 4.0,
+    "fireRate": 1.0,
+    "damage": 10,
+    "projectileSpeed": 40,
+    "detectionRadius": 25,
+    "attackRange": 12,
+    "count": 5
+  },
+  "map": {
+    "width": 60,
+    "height": 60,
+    "wallHeight": 4,
+    "obstacles": [
+      {
+        "type": "box",
+        "position": [0, 1, 0],
+        "size": [4, 2, 4]
+      },
+      {
+        "type": "box",
+        "position": [15, 1, 15],
+        "size": [3, 2, 3]
+      },
+      {
+        "type": "box",
+        "position": [-15, 1, 15],
+        "size": [3, 2, 3]
+      },
+      {
+        "type": "box",
+        "position": [15, 1, -15],
+        "size": [3, 2, 3]
+      },
+      {
+        "type": "box",
+        "position": [-15, 1, -15],
+        "size": [3, 2, 3]
+      }
+    ],
+    "enemySpawns": [
+      [20, 1, 20],
+      [-20, 1, 20],
+      [20, 1, -20],
+      [-20, 1, -20],
+      [0, 1, 25]
+    ]
+  }
+}

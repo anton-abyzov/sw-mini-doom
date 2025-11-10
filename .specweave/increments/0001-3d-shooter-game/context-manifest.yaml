@@ -1,0 +1,129 @@
+---
+# Context Manifest for Increment: 0001-3d-shooter-game
+# This file declares exactly what specifications and architecture docs are needed for implementation
+
+# Living Specification (source of truth)
+living_spec:
+  path: ../../docs/internal/specs/spec-0001-3d-shooter-game.md
+  sections:
+    - user-stories  # All 8 user stories (US-001 through US-008)
+    - acceptance-criteria  # All 44 AC-IDs
+    - functional-requirements  # FR-001 through FR-009
+    - non-functional-requirements  # NFR-001 through NFR-006
+    - success-criteria  # 6 measurable success metrics
+    - technical-architecture  # Entity interfaces, data models
+    - test-strategy  # Testing approach
+
+# Strategy Documents (high-level context)
+strategy_docs:
+  - path: ../../docs/internal/strategy/3d-shooter/overview.md
+    sections:
+      - product-vision
+      - target-audience
+      - core-value-proposition
+      - gameplay-philosophy
+
+# Architecture Decision Records (technical decisions)
+adrs:
+  - ../../docs/internal/architecture/adr/0001-threejs-rendering-approach.md
+  - ../../docs/internal/architecture/adr/0002-collision-detection-strategy.md
+  - ../../docs/internal/architecture/adr/0003-entity-component-system.md
+  - ../../docs/internal/architecture/adr/0004-ai-state-machine.md
+  - ../../docs/internal/architecture/adr/0005-asset-loading-strategy.md
+
+# System Design
+architecture:
+  - path: ../../docs/internal/architecture/system-design.md
+    sections:
+      - ecs-architecture
+      - core-systems
+      - components
+      - performance-architecture
+      - technology-stack
+
+# Architecture Diagrams
+diagrams:
+  - ../../docs/internal/architecture/diagrams/component-architecture.mmd
+  - ../../docs/internal/architecture/diagrams/game-loop-flow.mmd
+
+# Increment Files (implementation tracker)
+increment_files:
+  - spec.md  # Summary of requirements for this increment
+  - plan.md  # Technical implementation plan (7 phases)
+  - tasks.md  # 47 tasks with embedded test plans
+
+# Context Loading Strategy
+context_loading:
+  mode: selective  # Load only what's needed
+  max_context_tokens: 15000  # Budget for context loading
+  priority: high  # This is a P1 increment
+
+  # Auto-refresh context when these files change
+  watch_files:
+    - ../../docs/internal/specs/spec-0001-3d-shooter-game.md
+    - plan.md
+    - tasks.md
+
+# Token Budget Breakdown (estimated)
+token_budget:
+  living_spec: 4000  # Full spec with all user stories and AC-IDs
+  strategy: 800  # High-level product vision
+  adrs: 2500  # 5 ADRs @ ~500 tokens each
+  system_design: 2000  # ECS architecture and systems
+  diagrams: 500  # Mermaid diagrams (minimal)
+  increment_files: 3500  # spec.md, plan.md, tasks.md
+  buffer: 1700  # Reserved for updates
+  total: 15000
+
+# Related Features
+related_features: []  # No dependencies - this is increment 0001
+
+# Tags for search and categorization
+tags:
+  - 3d-game
+  - threejs
+  - typescript
+  - entity-component-system
+  - ai
+  - collision-detection
+  - browser-game
+  - webgl
+  - first-person-shooter
+
+# Tech Stack Context
+tech_stack:
+  language: typescript
+  framework: threejs
+  build_tool: vite
+  testing: vitest, playwright
+  runtime: browser
+
+# Quality Gates
+quality_gates:
+  - all_p1_ac_criteria_pass  # 44 acceptance criteria
+  - test_coverage_80_percent  # Game logic coverage
+  - performance_60_fps  # Sustained frame rate
+  - bundle_size_under_500kb  # Gzipped bundle
+  - zero_typescript_errors  # Strict mode compliance
+  - browser_compatibility_pass  # Chrome, Firefox, Safari, Edge
+
+# Notes
+notes: |
+  This increment implements the complete MVP for the 3D shooter game.
+  All P1 features are included (US-001 through US-007).
+  Audio features (US-008, P3) are deferred to increment 0002.
+
+  Implementation follows TDD workflow with tests embedded in tasks.md.
+  Total estimated effort: 160 hours (~3-4 weeks for one developer).
+
+  Key technical highlights:
+  - Entity Component System for modular architecture
+  - Simple collision detection (AABB + ray-sphere)
+  - AI state machine with 4 states
+  - Object pooling for projectiles
+  - JSON-based configuration for game balance
+
+  Success depends on maintaining 60 FPS performance target.
+  Use performance profiling early and often.
+
+---

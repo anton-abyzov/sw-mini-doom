@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mini Doom - 3D WebGL Shooter</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Arial', sans-serif;
+        overflow: hidden;
+        background: #000;
+      }
+
+      #game-canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+
+      #ui-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 100;
+      }
+
+      #hud {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        color: #fff;
+        font-size: 18px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        pointer-events: none;
+      }
+
+      .hud-item {
+        margin-bottom: 10px;
+      }
+
+      #crosshair {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 20px;
+        height: 20px;
+        pointer-events: none;
+      }
+
+      #crosshair::before,
+      #crosshair::after {
+        content: '';
+        position: absolute;
+        background: rgba(255, 255, 255, 0.8);
+      }
+
+      #crosshair::before {
+        top: 50%;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        transform: translateY(-50%);
+      }
+
+      #crosshair::after {
+        left: 50%;
+        top: 0;
+        width: 2px;
+        height: 100%;
+        transform: translateX(-50%);
+      }
+
+      #menu-screen,
+      #victory-screen,
+      #gameover-screen {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: #fff;
+        pointer-events: all;
+      }
+
+      .screen-title {
+        font-size: 64px;
+        margin-bottom: 30px;
+        text-shadow: 3px 3px 6px rgba(0, 0, 0, 1);
+      }
+
+      .screen-text {
+        font-size: 20px;
+        margin-bottom: 15px;
+        text-align: center;
+        max-width: 600px;
+        line-height: 1.6;
+      }
+
+      .screen-button {
+        margin-top: 30px;
+        padding: 15px 40px;
+        font-size: 24px;
+        background: #ff4444;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      .screen-button:hover {
+        background: #ff6666;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      #click-to-play {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #fff;
+        font-size: 24px;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 20px 40px;
+        border-radius: 10px;
+        pointer-events: none;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+
+      #health-bar-container {
+        width: 200px;
+        height: 20px;
+        background: rgba(0, 0, 0, 0.5);
+        border: 2px solid #fff;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+
+      #health-bar {
+        height: 100%;
+        background: linear-gradient(to right, #ff0000, #ff6666);
+        transition: width 0.3s;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game-canvas"></canvas>
+
+    <div id="ui-overlay">
+      <!-- HUD (shown during gameplay) -->
+      <div id="hud" class="hidden">
+        <div class="hud-item">
+          <div id="health-bar-container">
+            <div id="health-bar"></div>
+          </div>
+          <div id="health-text">Health: 100</div>
+        </div>
+        <div class="hud-item" id="kills-text">Kills: 0</div>
+        <div class="hud-item" id="timer-text">Time: 0:00</div>
+      </div>
+
+      <!-- Crosshair (shown during gameplay) -->
+      <div id="crosshair" class="hidden"></div>
+
+      <!-- Click to Play message -->
+      <div id="click-to-play" class="hidden">
+        CLICK TO PLAY
+        <div style="font-size: 14px; margin-top: 10px;">
+          SPACEBAR or LEFT CLICK = SHOOT<br>
+          WASD = MOVE | MOUSE = LOOK
+        </div>
+      </div>
+
+      <!-- Menu Screen -->
+      <div id="menu-screen">
+        <h1 class="screen-title">MINI DOOM</h1>
+        <p class="screen-text">
+          <strong>Controls:</strong><br>
+          WASD or Arrow Keys - Move<br>
+          Mouse - Look Around<br>
+          SPACEBAR or Left Click - Shoot<br>
+        </p>
+        <p class="screen-text">
+          Eliminate all enemies to win!
+        </p>
+        <button id="start-button" class="screen-button">START GAME</button>
+      </div>
+
+      <!-- Victory Screen -->
+      <div id="victory-screen" class="hidden">
+        <h1 class="screen-title">VICTORY!</h1>
+        <p class="screen-text">
+          You've eliminated all enemies!
+        </p>
+        <div class="screen-text">
+          <div id="victory-kills">Kills: 0</div>
+          <div id="victory-time">Time: 0:00</div>
+        </div>
+        <button id="victory-restart-button" class="screen-button">PLAY AGAIN</button>
+      </div>
+
+      <!-- Game Over Screen -->
+      <div id="gameover-screen" class="hidden">
+        <h1 class="screen-title">GAME OVER</h1>
+        <p class="screen-text">
+          You were defeated...
+        </p>
+        <div class="screen-text">
+          <div id="gameover-kills">Kills: 0</div>
+          <div id="gameover-time">Time: 0:00</div>
+        </div>
+        <button id="gameover-restart-button" class="screen-button">TRY AGAIN</button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

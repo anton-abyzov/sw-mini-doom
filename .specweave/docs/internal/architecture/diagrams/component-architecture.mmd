@@ -1,0 +1,135 @@
+%% Component Architecture Diagram - 3D WebGL Shooter Game
+%% C4 Model Level 3: Component Diagram
+%% This diagram shows the internal structure of the game engine
+
+graph TB
+    subgraph GameEngine["Game Engine (TypeScript)"]
+        subgraph Core["Core ECS"]
+            EntityMgr[Entity Manager<br/>---<br/>createEntity<br/>destroyEntity<br/>queryByComponents<br/>getEntity]
+            SystemMgr[System Manager<br/>---<br/>registerSystem<br/>updateSystems<br/>getSystemOrder]
+            GameLoop[Game Loop<br/>---<br/>requestAnimationFrame<br/>calculateDeltaTime<br/>updateSystems<br/>render]
+        end
+
+        subgraph Systems["Game Systems"]
+            Input[Input System<br/>---<br/>Processes keyboard/mouse<br/>Updates player velocity<br/>Handles pointer lock]
+            AI[AI System<br/>---<br/>Updates enemy FSM<br/>Checks player distance<br/>Sets target velocity<br/>Triggers shooting]
+            Movement[Movement System<br/>---<br/>position += velocity * dt<br/>Applies to all entities<br/>Framerate-independent]
+            Collision[Collision System<br/>---<br/>AABB entity-wall<br/>Ray-sphere projectile<br/>Resolves penetrations]
+            Projectile[Projectile System<br/>---<br/>Spawns from pool<br/>Updates lifetime<br/>Checks hits<br/>Destroys on timeout]
+            Health[Health System<br/>---<br/>Applies damage<br/>Checks death conditions<br/>Removes dead entities<br/>Updates HUD]
+            Render[Render System<br/>---<br/>Syncs mesh positions<br/>Updates camera<br/>Triggers Three.js render]
+        end
+
+        subgraph Components["Entity Components"]
+            Position[Position<br/>---<br/>position: Vector3<br/>rotation: Euler]
+            Velocity[Velocity<br/>---<br/>velocity: Vector3<br/>speed: number]
+            HealthComp[Health<br/>---<br/>current: number<br/>max: number]
+            Mesh[Mesh<br/>---<br/>mesh: THREE.Mesh]
+            AIComp[AI<br/>---<br/>state: FSMState<br/>target: Entity<br/>detectionRadius<br/>accuracy]
+            Shooter[Shooter<br/>---<br/>damage: number<br/>cooldown: number<br/>lastShotTime]
+            ProjComp[Projectile<br/>---<br/>owner: string<br/>lifetime: number<br/>age: number]
+            Collider[Collider<br/>---<br/>shape: AABBSphere<br/>radius: number<br/>size: Vector3]
+        end
+
+        subgraph Rendering["Three.js Rendering"]
+            SceneMgr[Scene Manager<br/>---<br/>Setup scene<br/>Configure lights<br/>Position camera]
+            MeshFactory[Mesh Factory<br/>---<br/>createPlayerMesh<br/>createEnemyMesh<br/>createProjectileMesh<br/>createWallMesh]
+            MaterialLib[Material Library<br/>---<br/>Shared materials<br/>Reduces draw calls<br/>Standard/Basic materials]
+        end
+
+        subgraph AI_Logic["AI Logic"]
+            FSM[State Machine<br/>---<br/>Abstract FSM class<br/>State transitions<br/>Update state logic]
+            EnemyAI[Enemy AI<br/>---<br/>Idle state<br/>Chase state<br/>Attack state<br/>Dead state]
+        end
+
+        subgraph CollisionLogic["Collision Logic"]
+            AABB[AABB<br/>---<br/>checkIntersection<br/>calculateOverlap<br/>Min/max coords]
+            RaySphere[Ray-Sphere<br/>---<br/>raySphereIntersection<br/>Discriminant calculation<br/>Hit distance]
+            CollResolver[Collision Resolver<br/>---<br/>Move entity back<br/>Zero velocity<br/>Epsilon offset]
+        end
+
+        subgraph Data["Data Loading"]
+            ConfigLoader[Config Loader<br/>---<br/>loadGameConfig<br/>loadMapConfig<br/>loadBalance<br/>Cache configs]
+            ConfigTypes[Config Types<br/>---<br/>GameConfig interface<br/>MapConfig interface<br/>TypeScript validation]
+        end
+
+        subgraph UI_Layer["UI Layer"]
+            HUD[HUD<br/>---<br/>Health display<br/>Kill count<br/>Timer<br/>Crosshair]
+            Menu[Menu Screen<br/>---<br/>Start button<br/>Instructions<br/>Game over<br/>Victory]
+        end
+    end
+
+    subgraph External["External (Three.js)"]
+        Scene[THREE.Scene]
+        Camera[THREE.Camera]
+        Renderer[THREE.Renderer]
+        ThreeJSMesh[THREE.Mesh]
+    end
+
+    subgraph DataFiles["Data Files (JSON)"]
+        GameConfig[game-config.json<br/>---<br/>Player properties<br/>Enemy properties<br/>Projectile config]
+        MapConfig[map-arena-01.json<br/>---<br/>Map geometry<br/>Spawn points<br/>Obstacles]
+        Balance[balance.json<br/>---<br/>AI parameters<br/>Combat tuning<br/>Detection radius]
+    end
+
+    %% Core relationships
+    GameLoop -->|Update 60Hz| SystemMgr
+    SystemMgr -->|Execute in order| Systems
+    Systems -->|Query entities| EntityMgr
+    EntityMgr -->|Store/Retrieve| Components
+
+    %% System dependencies
+    Input -->|Updates| Position
+    Input -->|Updates| Velocity
+    AI -->|Updates| AIComp
+    AI -->|Sets| Velocity
+    Movement -->|Reads| Velocity
+    Movement -->|Updates| Position
+    Collision -->|Reads| Position
+    Collision -->|Reads| Collider
+    Collision -->|Uses| AABB
+    Collision -->|Uses| RaySphere
+    Collision -->|Calls| CollResolver
+    Projectile -->|Reads| ProjComp
+    Projectile -->|Updates| Position
+    Health -->|Reads| HealthComp
+    Health -->|Triggers| HUD
+    Render -->|Reads| Position
+    Render -->|Reads| Mesh
+    Render -->|Updates| Scene
+
+    %% AI relationships
+    AI -->|Uses| FSM
+    FSM -->|Implements| EnemyAI
+
+    %% Rendering relationships
+    Render -->|Calls| SceneMgr
+    MeshFactory -->|Creates| ThreeJSMesh
+    MaterialLib -->|Provides materials| MeshFactory
+    SceneMgr -->|Manages| Scene
+    SceneMgr -->|Manages| Camera
+    Scene -->|Rendered by| Renderer
+    Mesh -->|References| ThreeJSMesh
+
+    %% Data loading relationships
+    ConfigLoader -->|Loads| GameConfig
+    ConfigLoader -->|Loads| MapConfig
+    ConfigLoader -->|Loads| Balance
+    ConfigLoader -->|Validates with| ConfigTypes
+    ConfigLoader -->|Initializes| EntityMgr
+
+    %% UI relationships
+    HUD -->|Displays| HealthComp
+    Menu -->|Controls| GameLoop
+
+    %% Styling
+    style Core fill:#4caf50,color:#fff
+    style Systems fill:#2196f3,color:#fff
+    style Components fill:#ff9800,color:#fff
+    style Rendering fill:#9c27b0,color:#fff
+    style AI_Logic fill:#e91e63,color:#fff
+    style CollisionLogic fill:#00bcd4,color:#fff
+    style Data fill:#ffc107,color:#000
+    style UI_Layer fill:#8bc34a,color:#fff
+    style External fill:#607d8b,color:#fff
+    style DataFiles fill:#795548,color:#fff

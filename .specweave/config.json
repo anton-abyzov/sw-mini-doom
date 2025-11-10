@@ -1,0 +1,22 @@
+{
+  "project": {
+    "name": "sw-mini-doom",
+    "version": "0.1.0"
+  },
+  "adapters": {
+    "default": "claude"
+  },
+  "documentation": {
+    "preview": {
+      "enabled": true,
+      "autoInstall": false,
+      "port": 3015,
+      "openBrowser": true,
+      "theme": "default",
+      "excludeFolders": [
+        "legacy",
+        "node_modules"
+      ]
+    }
+  }
+}
